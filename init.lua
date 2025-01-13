@@ -728,6 +728,9 @@ require("lazy").setup({
 			-- You can configure highlights by doing something like:
 			vim.cmd.hi("Comment gui=none")
 		end,
+		opts = {
+			transparent = true,
+		},
 	},
 
 	-- Other colorschemes
@@ -864,30 +867,11 @@ require("lazy").setup({
 })
 
 -- Custom Keymaps
-
--- Search word under cursor in current buffer
-vim.keymap.set("n", "<leader>fw", function()
-	local cword = vim.fn.expand("<cword>")
-	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("/" .. cword .. "<CR>", true, false, true), "m", false)
-end)
-
--- Define a function to execute the current Python file
-local function run_python_file()
-	-- Get the name of the current buffer
-	local file_name = vim.fn.expand("%:p")
-
-	-- Check if the current buffer is a Python file
-	if vim.fn.expand("%:e") == "py" then
-		-- Execute the Python file using the system command
-		vim.fn.system("python3 " .. file_name)
-	else
-		-- If it's not a Python file, display an error message
-		print("Not a Python file!")
-	end
-end
-
 -- Map <leader>r to run the current Python file
 vim.keymap.set("n", "<leader>r", ":w <bar> exec '!python3 '.shellescape('%')<CR>", { noremap = true })
+
+vim.keymap.set("n", "<leader>e", ":Ex<CR>", { noremap = true })
+vim.keymap.set("n", "<leader>w", ":w<CR>", { noremap = true })
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
