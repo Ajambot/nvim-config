@@ -598,10 +598,10 @@ require("lazy").setup({
 				--
 				-- You can use a sub-list to tell conform to run *until* a formatter
 				-- is found.
-				javascript = { { "prettierd", "prettier" } },
-				typescript = { { "prettierd", "prettier" } },
-				javascriptreact = { { "prettierd", "prettier" } },
-				typescritptreact = { { "prettierd", "prettier" } },
+				javascript = { "prettierd", "prettier" },
+				typescript = { "prettierd", "prettier" },
+				javascriptreact = { "prettierd", "prettier" },
+				typescritptreact = { "prettierd", "prettier" },
 			},
 		},
 	},
@@ -656,21 +656,20 @@ require("lazy").setup({
 						luasnip.lsp_expand(args.body)
 					end,
 				},
-				completion = { completeopt = "menu,menuone,noinsert" },
 
 				-- For an understanding of why these mappings were
 				-- chosen, you will need to read `:help ins-completion`
 				--
-				-- No, but seriously. Please read `:help ins-completion`, it is really good!
 				mapping = cmp.mapping.preset.insert({
+					-- No, but seriously. Please read `:help ins-completion`, it is really good!
 					-- Select the [n]ext item
 					["<C-n>"] = cmp.mapping.select_next_item(),
 					-- Select the [p]revious item
 					["<C-p>"] = cmp.mapping.select_prev_item(),
 
 					-- Scroll the documentation window [b]ack / [f]orward
-					["<C-b>"] = cmp.mapping.scroll_docs(-4),
-					["<C-f>"] = cmp.mapping.scroll_docs(4),
+					["<C-v>"] = cmp.mapping.scroll_docs(-4),
+					["<C-b>"] = cmp.mapping.scroll_docs(4),
 
 					-- Accept ([y]es) the completion.
 					--  This will auto-import if your LSP supports it.
@@ -753,6 +752,114 @@ require("lazy").setup({
 		event = "VimEnter",
 		dependencies = { "nvim-lua/plenary.nvim" },
 		opts = { signs = false },
+	},
+
+	{
+		"supermaven-inc/supermaven-nvim",
+		config = function()
+			require("supermaven-nvim").setup({
+				keymaps = {
+					accept_suggestion = "<C-f>",
+					clear_suggestion = "<C-e>",
+					accept_word = "<C-j>",
+				},
+			})
+		end,
+	},
+	{
+		-- luarocks.nvim is a Neovim plugin designed to streamline the installation
+		-- of luarocks packages directly within Neovim. It simplifies the process
+		-- of managing Lua dependencies, ensuring a hassle-free experience for
+		-- Neovim users.
+		-- https://github.com/vhyrro/luarocks.nvim
+		"vhyrro/luarocks.nvim",
+		-- this plugin needs to run before anything else
+		priority = 1001,
+		opts = {
+			rocks = { "magick" },
+		},
+	},
+	{
+		"benlubas/molten-nvim",
+		version = "^1.0.0", -- use version <2.0.0 to avoid breaking changes
+		dependencies = { "3rd/image.nvim" },
+		build = ":UpdateRemotePlugins",
+		init = function()
+			-- these are examples, not defaults. Please see the readme
+			vim.g.molten_image_provider = "image.nvim"
+			vim.g.molten_output_win_max_height = 20
+		end,
+	},
+	{
+		"3rd/image.nvim",
+		dependencies = { "luarocks.nvim" },
+		config = function()
+			require("image").setup({
+				backend = "kitty",
+				processor = "magick_cli",
+				kitty_method = "normal",
+				integrations = {
+					-- Notice these are the settings for markdown files
+					markdown = {
+						enabled = true,
+						clear_in_insert_mode = false,
+						-- Set this to false if you don't want to render images coming from
+						-- a URL
+						download_remote_images = true,
+						-- Change this if you would only like to render the image where the
+						-- cursor is at
+						-- I set this to true, because if the file has way too many images
+						-- it will be laggy and will take time for the initial load
+						only_render_image_at_cursor = true,
+						-- markdown extensions (ie. quarto) can go here
+						filetypes = { "markdown", "vimwiki" },
+					},
+					neorg = {
+						enabled = true,
+						clear_in_insert_mode = false,
+						download_remote_images = true,
+						only_render_image_at_cursor = false,
+						filetypes = { "norg" },
+					},
+					-- This is disabled by default
+					-- Detect and render images referenced in HTML files
+					-- Make sure you have an html treesitter parser installed
+					-- ~/github/dotfiles-latest/neovim/nvim-lazyvim/lua/plugins/treesitter.lua
+					html = {
+						enabled = true,
+					},
+					-- This is disabled by default
+					-- Detect and render images referenced in CSS files
+					-- Make sure you have a css treesitter parser installed
+					-- ~/github/dotfiles-latest/neovim/nvim-lazyvim/lua/plugins/treesitter.lua
+					css = {
+						enabled = true,
+					},
+				},
+				max_width = nil,
+				max_height = nil,
+				max_width_window_percentage = nil,
+
+				-- This is what I changed to make my images look smaller, like a
+				-- thumbnail, the default value is 50
+				-- max_height_window_percentage = 20,
+				max_height_window_percentage = 40,
+
+				-- toggles images when windows are overlapped
+				window_overlap_clear_enabled = false,
+				window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+
+				-- auto show/hide images when the editor gains/looses focus
+				editor_only_render_when_focused = true,
+
+				-- auto show/hide images in the correct tmux window
+				-- In the tmux.conf add `set -g visual-activity off`
+				tmux_show_only_in_active_window = true,
+
+				-- render image files as images when opened
+				hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" },
+			})
+		end,
 	},
 
 	{ -- Collection of various small independent plugins/modules
@@ -872,6 +979,18 @@ vim.keymap.set("n", "<leader>r", ":w <bar> exec '!python3 '.shellescape('%')<CR>
 
 vim.keymap.set("n", "<leader>e", ":Ex<CR>", { noremap = true })
 vim.keymap.set("n", "<leader>w", ":w<CR>", { noremap = true })
+vim.keymap.set("n", "<leader>ji", ":MoltenInit python3<CR>", { silent = true, desc = "Initialize the plugin" })
+vim.keymap.set("n", "<leader>jr", ":MoltenEvaluateOperator<CR>", { silent = true, desc = "run operator selection" })
+vim.keymap.set("n", "<leader>jl", ":MoltenEvaluateLine<CR>", { silent = true, desc = "evaluate line" })
+vim.keymap.set("n", "<leader>jo", ":MoltenShowOutput<CR>", { silent = true, desc = "open output" })
+vim.keymap.set("n", "<Esc>", ":MoltenHideOutput<CR>", { silent = true, desc = "close output" })
+--vim.keymap.set("n", "<leader>rr", ":MoltenReevaluateCell<CR>",
+--    { silent = true, desc = "re-evaluate cell" })
+vim.keymap.set(
+	"v",
+	"<leader>jr",
+	":<C-u>MoltenEvaluateVisual<CR>gv",
+	{ silent = true, desc = "evaluate visual selection" }
+)
 
--- The line beneath this is called `modeline`. See `:help modeline`
--- vim: ts=2 sts=2 sw=2 et
+vim.g.molten_auto_open_output = false
