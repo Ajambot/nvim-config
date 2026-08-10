@@ -222,22 +222,22 @@ require("lazy").setup({
 	{ -- Fuzzy Finder (files, lsp, etc)
 		"nvim-telescope/telescope.nvim",
 		event = "VimEnter",
-		branch = "0.1.x",
+		branch = "master",
 		dependencies = {
 			"nvim-lua/plenary.nvim",
-			{ -- If encountering errors, see telescope-fzf-native README for installation instructions
-				"nvim-telescope/telescope-fzf-native.nvim",
+			-- { -- If encountering errors, see telescope-fzf-native README for installation instructions
+			-- 	"nvim-telescope/telescope-fzf-native.nvim",
 
-				-- `build` is used to run some command when the plugin is installed/updated.
-				-- This is only run then, not every time Neovim starts up.
-				build = "make",
+			-- 	-- `build` is used to run some command when the plugin is installed/updated.
+			-- 	-- This is only run then, not every time Neovim starts up.
+			-- 	build = "make",
 
-				-- `cond` is a condition used to determine whether this plugin should be
-				-- installed and loaded.
-				cond = function()
-					return vim.fn.executable("make") == 1
-				end,
-			},
+			-- 	-- `cond` is a condition used to determine whether this plugin should be
+			-- 	-- installed and loaded.
+			-- 	cond = function()
+			-- 		return vim.fn.executable("make") == 1
+			-- 	end,
+			-- },
 			{ "nvim-telescope/telescope-ui-select.nvim" },
 
 			-- Useful for getting pretty icons, but requires a Nerd Font.
@@ -279,6 +279,11 @@ require("lazy").setup({
 						enable_preview = true,
 					},
 				},
+				defaults = {
+					preview = {
+						filesize_limit = 0.5,
+					},
+				},
 				extensions = {
 					["ui-select"] = {
 						require("telescope.themes").get_dropdown(),
@@ -287,7 +292,7 @@ require("lazy").setup({
 			})
 
 			-- Enable Telescope extensions if they are installed
-			pcall(require("telescope").load_extension, "fzf")
+			-- pcall(require("telescope").load_extension, "fzf")
 			pcall(require("telescope").load_extension, "ui-select")
 
 			-- See `:help telescope.builtin`
@@ -458,7 +463,7 @@ require("lazy").setup({
 			--  So, we create new capabilities with nvim cmp, and then broadcast that to the servers.
 			local capabilities = vim.lsp.protocol.make_client_capabilities()
 			capabilities = vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
-			require("lspconfig").emmet_language_server.setup({
+			vim.lsp.config("emmet_language_server", {
 				filetypes = {
 					"css",
 					"eruby",
@@ -496,6 +501,8 @@ require("lazy").setup({
 				},
 			})
 
+			vim.lsp.enable("emmet_language_server")
+
 			-- Enable the following language servers
 			--  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
 			--
@@ -518,6 +525,7 @@ require("lazy").setup({
 				-- But for many setups, the LSP (`tsserver`) will work just fine
 				-- tsserver = {},
 				--
+				roslyn = {},
 
 				lua_ls = {
 					-- cmd = {...},
@@ -541,7 +549,12 @@ require("lazy").setup({
 			--    :Mason
 			--
 			--  You can press `g?` for help in this menu.
-			require("mason").setup()
+			require("mason").setup({
+				registries = {
+					"github:mason-org/mason-registry",
+					"github:Crashdummyy/mason-registry",
+				},
+			})
 
 			-- You can add other tools here that you want Mason to install
 			-- for you, so that they are available from within Neovim.
@@ -550,20 +563,22 @@ require("lazy").setup({
 				"stylua", -- Used to format Lua code
 			})
 			require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
-
-			require("mason-lspconfig").setup({
-				handlers = {
-					function(server_name)
-						local server = servers[server_name] or {}
-						-- This handles overriding only values explicitly passed
-						-- by the server configuration above. Useful when disabling
-						-- certain features of an LSP (for example, turning off formatting for tsserver)
-						server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
-						require("lspconfig")[server_name].setup(server)
-					end,
-				},
-			})
+			require("mason-lspconfig").setup()
+			for server_name, server in pairs(servers) do
+				server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
+				vim.lsp.config(server_name, server)
+				vim.lsp.enable(server_name)
+			end
 		end,
+	},
+
+	{
+		"seblyng/roslyn.nvim",
+		---@module 'roslyn.config'
+		---@type RoslynNvimConfig
+		opts = {
+			-- your configuration comes here; leave empty for default settings
+		},
 	},
 
 	{ -- Autoformat
@@ -754,114 +769,6 @@ require("lazy").setup({
 		opts = { signs = false },
 	},
 
-	{
-		"supermaven-inc/supermaven-nvim",
-		config = function()
-			require("supermaven-nvim").setup({
-				keymaps = {
-					accept_suggestion = "<C-f>",
-					clear_suggestion = "<C-e>",
-					accept_word = "<C-j>",
-				},
-			})
-		end,
-	},
-	{
-		-- luarocks.nvim is a Neovim plugin designed to streamline the installation
-		-- of luarocks packages directly within Neovim. It simplifies the process
-		-- of managing Lua dependencies, ensuring a hassle-free experience for
-		-- Neovim users.
-		-- https://github.com/vhyrro/luarocks.nvim
-		"vhyrro/luarocks.nvim",
-		-- this plugin needs to run before anything else
-		priority = 1001,
-		opts = {
-			rocks = { "magick" },
-		},
-	},
-	{
-		"benlubas/molten-nvim",
-		version = "^1.0.0", -- use version <2.0.0 to avoid breaking changes
-		dependencies = { "3rd/image.nvim" },
-		build = ":UpdateRemotePlugins",
-		init = function()
-			-- these are examples, not defaults. Please see the readme
-			vim.g.molten_image_provider = "image.nvim"
-			vim.g.molten_output_win_max_height = 20
-		end,
-	},
-	{
-		"3rd/image.nvim",
-		dependencies = { "luarocks.nvim" },
-		config = function()
-			require("image").setup({
-				backend = "kitty",
-				processor = "magick_cli",
-				kitty_method = "normal",
-				integrations = {
-					-- Notice these are the settings for markdown files
-					markdown = {
-						enabled = true,
-						clear_in_insert_mode = false,
-						-- Set this to false if you don't want to render images coming from
-						-- a URL
-						download_remote_images = true,
-						-- Change this if you would only like to render the image where the
-						-- cursor is at
-						-- I set this to true, because if the file has way too many images
-						-- it will be laggy and will take time for the initial load
-						only_render_image_at_cursor = true,
-						-- markdown extensions (ie. quarto) can go here
-						filetypes = { "markdown", "vimwiki" },
-					},
-					neorg = {
-						enabled = true,
-						clear_in_insert_mode = false,
-						download_remote_images = true,
-						only_render_image_at_cursor = false,
-						filetypes = { "norg" },
-					},
-					-- This is disabled by default
-					-- Detect and render images referenced in HTML files
-					-- Make sure you have an html treesitter parser installed
-					-- ~/github/dotfiles-latest/neovim/nvim-lazyvim/lua/plugins/treesitter.lua
-					html = {
-						enabled = true,
-					},
-					-- This is disabled by default
-					-- Detect and render images referenced in CSS files
-					-- Make sure you have a css treesitter parser installed
-					-- ~/github/dotfiles-latest/neovim/nvim-lazyvim/lua/plugins/treesitter.lua
-					css = {
-						enabled = true,
-					},
-				},
-				max_width = nil,
-				max_height = nil,
-				max_width_window_percentage = nil,
-
-				-- This is what I changed to make my images look smaller, like a
-				-- thumbnail, the default value is 50
-				-- max_height_window_percentage = 20,
-				max_height_window_percentage = 40,
-
-				-- toggles images when windows are overlapped
-				window_overlap_clear_enabled = false,
-				window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
-
-				-- auto show/hide images when the editor gains/looses focus
-				editor_only_render_when_focused = true,
-
-				-- auto show/hide images in the correct tmux window
-				-- In the tmux.conf add `set -g visual-activity off`
-				tmux_show_only_in_active_window = true,
-
-				-- render image files as images when opened
-				hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" },
-			})
-		end,
-	},
-
 	{ -- Collection of various small independent plugins/modules
 		"echasnovski/mini.nvim",
 		config = function()
@@ -901,11 +808,43 @@ require("lazy").setup({
 			--  Check out: https://github.com/echasnovski/mini.nvim
 		end,
 	},
+	{
+		"github/copilot.vim",
+	},
+	{
+		-- Install markdown preview, use npx if available.
+		"iamcco/markdown-preview.nvim",
+		cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+		ft = { "markdown" },
+		build = function(plugin)
+			if vim.fn.executable("npx") then
+				vim.cmd("!cd " .. plugin.dir .. " && cd app && npx --yes yarn install")
+			else
+				vim.cmd([[Lazy load markdown-preview.nvim]])
+				vim.fn["mkdp#util#install"]()
+			end
+		end,
+		init = function()
+			if vim.fn.executable("npx") then
+				vim.g.mkdp_filetypes = { "markdown" }
+			end
+		end,
+	},
 	{ -- Highlight, edit, and navigate code
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
 		opts = {
-			ensure_installed = { "bash", "c", "html", "lua", "luadoc", "markdown", "vim", "vimdoc" },
+			ensure_installed = {
+				"bash",
+				"c",
+				"html",
+				"lua",
+				"luadoc",
+				"markdown",
+				"vim",
+				"vimdoc",
+				"python",
+			},
 			-- Autoinstall languages that are not installed
 			auto_install = true,
 			highlight = {
@@ -921,7 +860,13 @@ require("lazy").setup({
 			-- [[ Configure Treesitter ]] See `:help nvim-treesitter`
 
 			---@diagnostic disable-next-line: missing-fields
-			require("nvim-treesitter.configs").setup(opts)
+			-- require("nvim-treesitter.config").setup(opts)
+			require("nvim-treesitter").setup({
+				highlight = {
+					enable = true, -- false will disable the whole extension
+					disable = {}, -- list of language that will be disabled
+				},
+			})
 
 			-- There are additional nvim-treesitter modules that you can use to interact
 			-- with nvim-treesitter. You should go explore a few and see what interests you:
@@ -979,18 +924,12 @@ vim.keymap.set("n", "<leader>r", ":w <bar> exec '!python3 '.shellescape('%')<CR>
 
 vim.keymap.set("n", "<leader>e", ":Ex<CR>", { noremap = true })
 vim.keymap.set("n", "<leader>w", ":w<CR>", { noremap = true })
-vim.keymap.set("n", "<leader>ji", ":MoltenInit python3<CR>", { silent = true, desc = "Initialize the plugin" })
-vim.keymap.set("n", "<leader>jr", ":MoltenEvaluateOperator<CR>", { silent = true, desc = "run operator selection" })
-vim.keymap.set("n", "<leader>jl", ":MoltenEvaluateLine<CR>", { silent = true, desc = "evaluate line" })
-vim.keymap.set("n", "<leader>jo", ":MoltenShowOutput<CR>", { silent = true, desc = "open output" })
-vim.keymap.set("n", "<Esc>", ":MoltenHideOutput<CR>", { silent = true, desc = "close output" })
---vim.keymap.set("n", "<leader>rr", ":MoltenReevaluateCell<CR>",
---    { silent = true, desc = "re-evaluate cell" })
-vim.keymap.set(
-	"v",
-	"<leader>jr",
-	":<C-u>MoltenEvaluateVisual<CR>gv",
-	{ silent = true, desc = "evaluate visual selection" }
-)
 
-vim.g.molten_auto_open_output = false
+vim.keymap.set("i", "<C-F>", 'copilot#Accept("\\<CR>")', {
+	expr = true,
+	replace_keycodes = false,
+})
+vim.g.copilot_no_tab_map = true
+
+vim.keymap.set("n", "<leader>mp", ":MarkdownPreviewToggle<CR>", { noremap = true })
+vim.g.mkdp_auto_close = 0
